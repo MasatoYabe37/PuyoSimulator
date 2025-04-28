@@ -1,9 +1,9 @@
 const cacheName = "MYCreation-PuyoSimulator-0.1.0";
 const contentToCache = [
     "Build/Build.loader.js",
-    "Build/Build.framework.js.gz",
-    "Build/Build.data.gz",
-    "Build/Build.wasm.gz",
+    "Build/Build.framework.js",
+    "Build/Build.data",
+    "Build/Build.wasm",
     "TemplateData/style.css"
 
 ];
