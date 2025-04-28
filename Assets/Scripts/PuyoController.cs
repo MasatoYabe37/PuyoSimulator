@@ -53,6 +53,9 @@ public class PuyoController : MonoBehaviour
     /// <summary> transform </summary>
     private RectTransform rectTransform = null;
 
+    /// <summary> 消える予約 </summary>
+    public bool isReqVanish { private set; get; } = false;
+
     /// <summary> 位置（インデックス） </summary>
     public Vector2Int position
     {
@@ -72,7 +75,7 @@ public class PuyoController : MonoBehaviour
 
     void Awake()
     {
-        initialize();
+        Initialize();
     }
 
     void Start()
@@ -92,7 +95,7 @@ public class PuyoController : MonoBehaviour
     /// <summary>
     /// 初期化
     /// </summary>
-    private void initialize()
+    private void Initialize()
     {
         rectTransform = transform as RectTransform;
     }
@@ -128,7 +131,8 @@ public class PuyoController : MonoBehaviour
             return true;
         }
         // ほかのぷよと重なっている
-        if (GameManager.Instance.GetPuyo(position) != null)
+        var puyo = GameManager.Instance.GetPuyo(position);
+        if (puyo != null && puyo != this)
         {
             return true;
         }
@@ -149,7 +153,7 @@ public class PuyoController : MonoBehaviour
         }
 
         // 下は地面
-        if (position.y <= 1)
+        if (position.y <= 0)
         {
             return false;
         }
@@ -207,13 +211,27 @@ public class PuyoController : MonoBehaviour
         GameManager.Instance.SetSelectPuyo(this);
     }
 
+    /// <summary>
+    /// 選択された
+    /// </summary>
     public void OnSelected()
     {
         puyoSelectImage.SetActive(true);
     }
 
+    /// <summary>
+    /// 選択外し
+    /// </summary>
     public void OnUnselected()
     {
         puyoSelectImage.SetActive(false);
+    }
+
+    /// <summary>
+    /// 消える予約
+    /// </summary>
+    public void RequestVanish()
+    {
+        isReqVanish = true;
     }
 }
