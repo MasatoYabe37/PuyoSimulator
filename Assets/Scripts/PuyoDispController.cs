@@ -7,7 +7,7 @@ public class PuyoDispController : MonoBehaviour
     public PuyoController parent = null;
     public PuyoController child = null;
 
-    private void Awake()
+    private void Start()
     {
         parent.SetInvisible();
         child.SetInvisible();

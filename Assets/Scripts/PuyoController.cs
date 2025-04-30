@@ -413,7 +413,11 @@ public class PuyoController : MonoBehaviour
             }
             position = pos;
             var move = ValidatePosition();
-            position = pos + move;
+            if (move.magnitude > 0)
+            {
+                position = pos + move;
+                parentPuyo.position += move;
+            }
         }
         else
         if (childPuyo != null)
