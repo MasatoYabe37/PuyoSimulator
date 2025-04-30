@@ -8,12 +8,23 @@ public class PuyoController : MonoBehaviour
     public enum ePuyoType
     {
         None,
+
         Red,
         Blue,
         Yellow,
         Green,
         Purple,
+
         Ojama,
+        Num,
+    }
+
+    public enum ePuyoRotate
+    {
+        Up,
+        Right,
+        Down,
+        Left,
         Num,
     }
 
@@ -56,6 +67,20 @@ public class PuyoController : MonoBehaviour
     /// <summary> 消える予約 </summary>
     public bool isReqVanish { private set; get; } = false;
 
+    /// <summary> 親ぷよ </summary>
+    public PuyoController parentPuyo = null;
+
+    /// <summary> 子ぷよ </summary>
+    public PuyoController childPuyo = null;
+
+    /// <summary> ぷよの回転（親の一を基準でどこにいるか） </summary>
+    private ePuyoRotate puyoRotate = ePuyoRotate.Up;
+
+    private float putTimer = 0.0f;
+    private const float PUT_TIME = 0.5f;
+
+    private bool isPuted = false;
+
     /// <summary> 位置（インデックス） </summary>
     public Vector2Int position
     {
@@ -90,6 +115,10 @@ public class PuyoController : MonoBehaviour
     void Update()
     {
         positionRaw = rectTransform.anchoredPosition;
+        if (parentPuyo != null)
+        {
+            UpdateRotate();
+        }
     }
 
     /// <summary>
@@ -120,18 +149,27 @@ public class PuyoController : MonoBehaviour
     /// <returns></returns>
     public bool isOvered()
     {
+        return isOvered(position);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns></returns>
+    public bool isOvered(Vector2Int pos)
+    {
         // 地面に埋没
-        if (position.y < 0)
+        if (pos.y < 0)
         {
             return true;
         }
         // 横壁に埋没
-        if (position.x < 0 || position.x > 5)
+        if (pos.x < 0 || pos.x > 5)
         {
             return true;
         }
         // ほかのぷよと重なっている
-        var puyo = GameManager.Instance.GetPuyo(position);
+        var puyo = GameManager.Instance.GetPuyo(pos);
         if (puyo != null && puyo != this)
         {
             return true;
@@ -174,16 +212,29 @@ public class PuyoController : MonoBehaviour
     /// </summary>
     public void quickDrop()
     {
+        // 下まで移動させる
         while(true)
         {
             if (isFallable() == false)
             {
                 break;
             }
+            if (childPuyo != null && childPuyo.isFallable() == false)
+            {
+                break;
+            }
             Vector2Int under_position = position;
             under_position.y -= 1;
             position = under_position;
+            if (childPuyo != null)
+            {
+                Vector2Int under_position_child = childPuyo.position;
+                under_position_child.y -= 1;
+                childPuyo.position = under_position_child;
+            }
         }
+        // 動けないようにする
+        SetPut();
     }
 
     /// <summary>
@@ -233,5 +284,280 @@ public class PuyoController : MonoBehaviour
     public void RequestVanish()
     {
         isReqVanish = true;
+    }
+
+    /// <summary>
+    /// 親を保存
+    /// </summary>
+    /// <param name="parent"></param>
+    public void SetParent(PuyoController parent)
+    {
+        parentPuyo = parent;
+        if (parent != null)
+        {
+            parent.SetChild(this);
+        }
+        puyoRotate = ePuyoRotate.Up;
+        UpdateRotate();
+    }
+
+    /// <summary>
+    /// 子を保存
+    /// </summary>
+    /// <param name="child"></param>
+    public void SetChild(PuyoController child)
+    {
+        childPuyo = child;
+    }
+
+    /// <summary>
+    /// 子を保存
+    /// </summary>
+    /// <param name="child"></param>
+    public PuyoController GetChild()
+    {
+        return childPuyo;
+    }
+
+    /// <summary>
+    /// 移動できるかチェック
+    /// </summary>
+    /// <returns></returns>
+    public bool IsMove(Vector2Int move)
+    {
+        var pos = position + move;
+        if (isOvered(pos))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// 移動させる
+    /// </summary>
+    /// <param name="move"></param>
+    public void Move(Vector2Int move)
+    {
+        position += move;
+    }
+
+    /// <summary>
+    /// 回転できるかどうかチェック
+    /// </summary>
+    /// <param name="rot"></param>
+    /// <returns></returns>
+    public bool CheckRotate(ePuyoRotate rot)
+    {
+        // 親がいるなら位置を移動する
+        if (parentPuyo != null)
+        {
+            var pos = parentPuyo.position;
+            switch (puyoRotate)
+            {
+                // 親の上下は移動可能
+                case ePuyoRotate.Up:
+                case ePuyoRotate.Down:
+                    return true;
+
+                // 親の左右は、親の左右に壁やプヨがある場合回転不可
+                case ePuyoRotate.Left:
+                case ePuyoRotate.Right:
+                    var pos_right = pos;
+                    pos_right.x += 1;
+                    var pos_left = pos;
+                    pos_left.x -= 1;
+                    return !(isOvered(pos_left) && isOvered(pos_right));
+            }
+        }
+        else
+        if (childPuyo != null)
+        {
+            return childPuyo.CheckRotate(rot);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 回転を更新
+    /// </summary>
+    public void UpdateRotate()
+    {
+        // 親がいるなら位置を移動する
+        if (parentPuyo != null)
+        {
+            var pos = parentPuyo.position;
+            switch (puyoRotate)
+            {
+                // 親の上に移動
+                case ePuyoRotate.Up:
+                    pos.y += 1;
+                    break;
+                // 親の下に移動
+                case ePuyoRotate.Down:
+                    pos.y -= 1;
+                    break;
+                // 親の左に移動
+                case ePuyoRotate.Left:
+                    pos.x -= 1;
+                    break;
+                // 親の右に移動
+                case ePuyoRotate.Right:
+                    pos.x += 1;
+                    break;
+            }
+            position = pos;
+            var move = ValidatePosition();
+            position = pos + move;
+        }
+        else
+        if (childPuyo != null)
+        {
+            childPuyo.UpdateRotate();
+        }
+    }
+
+    /// <summary>
+    /// 位置補正
+    /// </summary>
+    public Vector2Int ValidatePosition()
+    {
+        Vector2Int move = new Vector2Int(0, 0);
+        // 親がいるなら位置を移動する
+        if (parentPuyo != null)
+        {
+            switch (puyoRotate)
+            {
+                // 親の上にいる時は、親がどこかに埋もれているかチェック
+                case ePuyoRotate.Up:
+                    if (parentPuyo.isOvered())
+                    {
+                        move.y += 1;
+                    }
+                    break;
+                // 親の下にいる時は、自分がどこかに埋もれているかチェック
+                case ePuyoRotate.Down:
+                    if (isOvered())
+                    {
+                        move.y += 1;
+                    }
+                    break;
+                // 親の左にいる時は、
+                case ePuyoRotate.Left:
+                    if (isOvered())
+                    {
+                        move.x += 1;
+                    }
+                    break;
+                // 親の右
+                case ePuyoRotate.Right:
+                    if (isOvered())
+                    {
+                        move.x -= 1;
+                    }
+                    break;
+            }
+        }
+        return move;
+    }
+
+    /// <summary>
+    /// 右回転
+    /// </summary>s
+    public void rotateRight()
+    {
+        var next_rot = (ePuyoRotate)(((int)puyoRotate + 1) % (int)ePuyoRotate.Num);
+        var next_next_rot = (ePuyoRotate)(((int)puyoRotate + 2) % (int)ePuyoRotate.Num);
+        if (CheckRotate(next_rot))
+        {
+            puyoRotate = next_rot;
+            if (parentPuyo != null)
+            {
+                parentPuyo.puyoRotate = puyoRotate;
+            }
+            if (childPuyo != null)
+            {
+                childPuyo.puyoRotate = next_rot;
+            }
+            UpdateRotate();
+        }
+        else
+        if (CheckRotate(next_next_rot))
+        {
+            puyoRotate = next_next_rot;
+            if (parentPuyo != null)
+            {
+                parentPuyo.puyoRotate = puyoRotate;
+            }
+            if (childPuyo != null)
+            {
+                childPuyo.puyoRotate = next_rot;
+            }
+            UpdateRotate();
+        }
+    }
+
+    /// <summary>
+    /// 左回転
+    /// </summary>
+    public void rotateLeft()
+    {
+        var next_rot = (ePuyoRotate)(((int)puyoRotate - 1 + (int)ePuyoRotate.Num) % (int)ePuyoRotate.Num);
+        var next_next_rot = (ePuyoRotate)(((int)puyoRotate - 2 + (int)ePuyoRotate.Num) % (int)ePuyoRotate.Num);
+        if (CheckRotate(next_rot))
+        {
+            puyoRotate = next_rot;
+            if (parentPuyo != null)
+            {
+                parentPuyo.puyoRotate = puyoRotate;
+            }
+            if (childPuyo != null)
+            {
+                childPuyo.puyoRotate = puyoRotate;
+            }
+            UpdateRotate();
+        }
+        else
+        if (CheckRotate(next_next_rot))
+        {
+            puyoRotate = next_next_rot;
+            if (parentPuyo != null)
+            {
+                parentPuyo.puyoRotate = puyoRotate;
+            }
+            if (childPuyo != null)
+            {
+                childPuyo.puyoRotate = puyoRotate;
+            }
+            UpdateRotate();
+        }
+    }
+
+    /// <summary>
+    /// 動けない状態にする
+    /// </summary>
+    public void SetPut()
+    {
+        GameManager.Instance.RegisterPuyo(this);
+        var parent = parentPuyo;
+        var child = childPuyo;
+        putTimer = PUT_TIME;
+        parentPuyo = null;
+        childPuyo = null;
+        isPuted = true;
+        if (parent != null)
+        {
+            parent.SetPut();
+        }
+        if (child != null)
+        {
+            child.SetPut();
+        }
+    }
+
+    public bool IsPuted()
+    {
+        return isPuted; 
     }
 }
