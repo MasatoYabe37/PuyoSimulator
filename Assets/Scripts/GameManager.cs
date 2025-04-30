@@ -46,6 +46,8 @@ public class GameManager : MonoBehaviour
     public GameObject puyoPrefab = null;
     public TextController rensaText = null;
     public TextController modeChangeText = null;
+    public PuyoDispController nextPuyoDispController = null;
+    public PuyoDispController nextNextPuyoDispController = null;
 
     private bool isExistVanishingPuyo = false;
     private float waitTimer = 0.0f;
@@ -100,7 +102,9 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        rensaText.SetText($"<b>{0}</b> 連鎖");
+        rensaText.SetText($"<b>{0}</b>");
+        // プヨ配列を生成
+        SetupDropPuyo();
     }
 
     void Update()
@@ -137,11 +141,6 @@ public class GameManager : MonoBehaviour
     private void EndStopState()
     {
         rensaNum = 0;
-        // プヨ配列を生成
-        if (puyoMode == ePuyoMode.TokoPuyo)
-        {
-            SetupDropPuyo();
-        }
     }
     #endregion
 
@@ -155,7 +154,12 @@ public class GameManager : MonoBehaviour
         if (puyoMode == ePuyoMode.TokoPuyo)
         {
             CurrentDropPuyo = CreatePuyo(dropPuyoArr[BufferIndex]);
+            var next_index = (BufferIndex + 1) % BUFFER_NUM;
+            var next_next_index = (BufferIndex + 2) % BUFFER_NUM;
             BufferIndex = (BufferIndex + 1) % BUFFER_NUM;
+
+            nextPuyoDispController.SetPuyo(dropPuyoArr[next_index]);
+            nextNextPuyoDispController.SetPuyo(dropPuyoArr[next_next_index]);
         }
     }
 
@@ -273,7 +277,7 @@ public class GameManager : MonoBehaviour
     {
         waitTimer = 0.0f;
         rensaNum++;
-        rensaText.SetText($"<b>{rensaNum}</b> 連鎖");
+        rensaText.SetText($"<b>{rensaNum}</b>");
 
         // 消えるフラグがついてるやつは消す
         for(int i=0; i<puyoList.Count; ++i)
@@ -539,6 +543,10 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void SetPalletePuyo(Vector2Int position)
     {
+        if (puyoMode == ePuyoMode.TokoPuyo)
+        {
+            return;
+        }
         var puyo = GetPuyo(position);
         if (selectedPalletePuyo != null && selectedPalletePuyo.puyoType != PuyoController.ePuyoType.None)
         {
@@ -623,6 +631,10 @@ public class GameManager : MonoBehaviour
     /// <param name="puyo"></param>
     public void RemovePuyo(PuyoController puyo, bool isRemoveFromList)
     {
+        if (puyo == null)
+        {
+            return;
+        }
         if (isRemoveFromList)
         {
             if (puyoList.Contains(puyo))
@@ -702,14 +714,23 @@ public class GameManager : MonoBehaviour
             case ePuyoMode.PuyoZu:
                 if (modeChangeText != null)
                 {
-                    modeChangeText.SetText("ぷよ図");
+                    modeChangeText.SetText("PUYO-ZU");
                 }
                 ChangeState(eUpdateState.Stop);
+                if (CurrentDropPuyo != null)
+                {
+                    RemovePuyo(CurrentDropPuyo, true);
+                    RemovePuyo(CurrentDropPuyo.parentPuyo, true);
+                    RemovePuyo(CurrentDropPuyo.childPuyo, true);
+                    BufferIndex = (BufferIndex - 1 + BUFFER_NUM) % BUFFER_NUM;
+                    nextPuyoDispController.Remove();
+                    nextNextPuyoDispController.Remove();
+                }
                 break;
             case ePuyoMode.TokoPuyo:
                 if (modeChangeText != null)
                 {
-                    modeChangeText.SetText("とこぷよ");
+                    modeChangeText.SetText("TOKO-PUYO");
                 }
                 ChangeState(eUpdateState.Play);
                 break;

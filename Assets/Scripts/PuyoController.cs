@@ -64,6 +64,9 @@ public class PuyoController : MonoBehaviour
     /// <summary> transform </summary>
     private RectTransform rectTransform = null;
 
+    /// <summary> canvas group </summary>
+    private CanvasGroup canvasGroup = null;
+
     /// <summary> 消える予約 </summary>
     public bool isReqVanish { private set; get; } = false;
 
@@ -127,6 +130,7 @@ public class PuyoController : MonoBehaviour
     private void Initialize()
     {
         rectTransform = transform as RectTransform;
+        canvasGroup = GetComponent<CanvasGroup>();
     }
 
     /// <summary>
@@ -560,4 +564,21 @@ public class PuyoController : MonoBehaviour
     {
         return isPuted; 
     }
+
+    public void SetInvisible()
+    {
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = 0.0f;
+        }
+    }
+
+    public void SetVisible()
+    {
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = 1.0f;
+        }
+    }
+
 }
