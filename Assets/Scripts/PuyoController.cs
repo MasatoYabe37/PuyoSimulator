@@ -547,6 +547,7 @@ public class PuyoController : MonoBehaviour
     /// </summary>
     public void SetPut()
     {
+        GameManager.Instance.SavePuyoList(); // 1Fに一度のみ（最初の一回だけ保存される）
         GameManager.Instance.RegisterPuyo(this);
         var parent = parentPuyo;
         var child = childPuyo;
