@@ -951,6 +951,7 @@ public class GameManager : MonoBehaviour
             var next_next_index = (bufferIndex + 2) % BUFFER_NUM;
             nextPuyoDispController.SetPuyo(dropPuyoArr[next_index]);
             nextNextPuyoDispController.SetPuyo(dropPuyoArr[next_next_index]);
+            bufferIndex = (bufferIndex + 1) % BUFFER_NUM;
         }
     }
 
