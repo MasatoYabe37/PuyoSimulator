@@ -58,6 +58,9 @@ public class PuyoController : MonoBehaviour
     /// <summary> 位置 </summary>
     public Vector2 positionRaw = new Vector2();
 
+    /// <summary> 位置オフセット </summary>
+    public Vector2 positionOffset = new Vector2();
+
     /// <summary> （パレット用）選択中かどうか </summary>
     public bool isSelected = false;
 
@@ -69,6 +72,9 @@ public class PuyoController : MonoBehaviour
 
     /// <summary> 消える予約 </summary>
     public bool isReqVanish { private set; get; } = false;
+
+    /// <summary> 親ぷよ </summary>
+    public bool isMainPuyo = false;
 
     /// <summary> 親ぷよ </summary>
     public PuyoController parentPuyo = null;
@@ -97,6 +103,17 @@ public class PuyoController : MonoBehaviour
         {
             positionRaw.x = GameManager.TILE_SIZE * value.x;
             positionRaw.y = GameManager.TILE_SIZE * value.y;
+            if (isMainPuyo)
+            {
+                positionRaw.x += positionOffset.x;
+                positionRaw.y += positionOffset.y;
+            }
+            else
+            if (parentPuyo != null)
+            {
+                positionRaw.x += parentPuyo.positionOffset.x;
+                positionRaw.y += parentPuyo.positionOffset.y;
+            }
             SetPosition();
         }
     }
@@ -117,7 +134,25 @@ public class PuyoController : MonoBehaviour
 
     void Update()
     {
+        if (isPuted == false)
+        {
+            // 自動落下が有効の場合
+            if (GameManager.Instance.isAutoFall)
+            {
+                if (isMainPuyo)
+                {
+                    float fall_speed = 1.0f * Application.targetFrameRate;
+                    float move_y = fall_speed * Time.deltaTime;
+                    Vector2 move = new Vector2(0.0f, -move_y);
+                    rectTransform.anchoredPosition += move;
+                }
+            }
+        }
         positionRaw = rectTransform.anchoredPosition;
+        positionOffset.x = positionRaw.x % GameManager.TILE_SIZE;
+        positionOffset.y = positionRaw.y % GameManager.TILE_SIZE;
+
+        // 子ぷよは親に合わせて回転の位置を調整する
         if (parentPuyo != null)
         {
             UpdateRotate();
@@ -563,6 +598,7 @@ public class PuyoController : MonoBehaviour
         {
             child.SetPut();
         }
+        positionOffset = Vector2.zero;
     }
 
     public bool IsPuted()

@@ -47,6 +47,7 @@ public class GameManager : MonoBehaviour
     public GameObject puyoPrefab = null;
     public TextController rensaText = null;
     public TextController modeChangeText = null;
+    public TextController autoFallButtonText = null;
     public PuyoDispController nextPuyoDispController = null;
     public PuyoDispController nextNextPuyoDispController = null;
     public GameObject puyozuPallete = null;
@@ -70,6 +71,8 @@ public class GameManager : MonoBehaviour
     private float playTimer = 0.0f;
     public TextController playTimerText = null;
 
+    public bool isAutoFall { private set; get; } = false;
+
     void Awake()
     {
         if (_instance != null)
@@ -78,6 +81,7 @@ public class GameManager : MonoBehaviour
             return;
         }
         _instance = this;
+        Application.targetFrameRate = 60;
 
         startStateEvents = new System.Action<eUpdateState>[(int)eUpdateState.Num]
         {
@@ -647,12 +651,14 @@ public class GameManager : MonoBehaviour
         new_puyo_1.puyoType = puyo_info.puyoType1;
         new_puyo_1.Setup();
         new_puyo_1.position = new Vector2Int(2, 12);
+        new_puyo_1.isMainPuyo = true;
 
         var new_puyo_obj_2 = GameObject.Instantiate(puyoPrefab, Vector3.zero, Quaternion.identity, puyoParent);
         var new_puyo_2 = new_puyo_obj_2.GetComponent<PuyoController>();
         new_puyo_2.puyoType = puyo_info.puyoType2;
         new_puyo_2.Setup();
         new_puyo_2.SetParent(new_puyo_1);
+        new_puyo_2.isMainPuyo = false;
 
         return new_puyo_1;
     }
@@ -815,6 +821,7 @@ public class GameManager : MonoBehaviour
         {
             tokopuyoPallete.SetActive(true);
         }
+        isAutoFall = false;
     }
 
     /// <summary>
@@ -995,7 +1002,11 @@ public class GameManager : MonoBehaviour
     {
         if (puyoMode == ePuyoMode.TokoPuyo)
         {
-
+            isAutoFall = !isAutoFall;
+            if (autoFallButtonText != null)
+            {
+                autoFallButtonText.SetText($"AutoFall:{(isAutoFall?"ON":"OFF")}");
+            }
         }
     }
 }
