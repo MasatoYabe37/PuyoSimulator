@@ -134,30 +134,48 @@ public class PuyoController : MonoBehaviour
 
     void Update()
     {
-        if (isPuted == false)
-        {
-            // 自動落下が有効の場合
-            if (GameManager.Instance.isAutoFall)
-            {
-                if (isMainPuyo)
-                {
-                    float fall_speed = 1.0f * Application.targetFrameRate;
-                    float move_y = fall_speed * Time.deltaTime;
-                    Vector2 move = new Vector2(0.0f, -move_y);
-                    rectTransform.anchoredPosition += move;
-                }
-            }
-        }
-        positionRaw = rectTransform.anchoredPosition;
-        positionOffset.x = positionRaw.x % GameManager.TILE_SIZE;
-        positionOffset.y = positionRaw.y % GameManager.TILE_SIZE;
-
-        // 子ぷよは親に合わせて回転の位置を調整する
-        if (parentPuyo != null)
-        {
-            UpdateRotate();
-        }
     }
+
+    public void UpdateManual()
+	{
+		if (isPuted == false)
+		{
+			// 自動落下が有効の場合
+			if (GameManager.Instance.isAutoFall)
+			{
+				if (isMainPuyo)
+				{
+                    Fall();
+				}
+			}
+		}
+		positionRaw = rectTransform.anchoredPosition;
+		positionOffset.x = positionRaw.x % GameManager.TILE_SIZE;
+		positionOffset.y = positionRaw.y % GameManager.TILE_SIZE;
+
+		// 子ぷよは親に合わせて回転の位置を調整する
+		if (parentPuyo != null)
+		{
+			UpdateRotate();
+		}
+
+        // 子ぷよを更新する
+        if (childPuyo != null)
+        {
+            childPuyo.UpdateManual();
+        }
+	}
+
+    private void Fall()
+	{
+		if (isFallable())
+		{
+			float fall_speed = 1.0f * Application.targetFrameRate;
+			float move_y = fall_speed * Time.deltaTime;
+			Vector2 move = new Vector2(0.0f, -move_y);
+			rectTransform.anchoredPosition += move;
+		}
+	}
 
     /// <summary>
     /// 初期化
@@ -221,7 +239,7 @@ public class PuyoController : MonoBehaviour
     /// 落下可能か？（下に何もないか？）
     /// </summary>
     /// <returns></returns>
-    public bool isFallable()
+    public bool isFallable(bool isCheckChild = false)
     {
         // 重なっている
         if (isOvered())
@@ -243,13 +261,23 @@ public class PuyoController : MonoBehaviour
             return false;
         }
 
-        return true;
+        bool result = true;
+
+        if (isCheckChild)
+        {
+            if (childPuyo != null)
+            {
+                result = childPuyo.isFallable(isCheckChild);
+            }
+		}
+
+        return result;
     }
 
     /// <summary>
     /// クイックドロップ
     /// </summary>
-    public void quickDrop()
+    public void QuickDrop()
     {
         // 下まで移動させる
         while(true)
@@ -362,14 +390,19 @@ public class PuyoController : MonoBehaviour
     /// 移動できるかチェック
     /// </summary>
     /// <returns></returns>
-    public bool IsMove(Vector2Int move)
+    public bool IsMove(Vector2Int move, bool checkChild = false)
     {
         var pos = position + move;
         if (isOvered(pos))
         {
             return false;
         }
-        return true;
+        bool result = true;
+        if (checkChild && childPuyo != null)
+        {
+            result = childPuyo.IsMove(move, checkChild);
+        }
+        return result;
     }
 
     /// <summary>

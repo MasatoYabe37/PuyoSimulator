@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 [DefaultExecutionOrder(-10)]
@@ -63,8 +64,9 @@ public class GameManager : MonoBehaviour
     private PuyoController selectedPalletePuyo = null;
     private bool isSavePuyo = false;
 
-    private const int BUFFER_NUM = 65536;
-    private PuyoDropInfo[] dropPuyoArr = new PuyoDropInfo[BUFFER_NUM];
+    private const int BUFFER_NUM = 128;
+    private const int BUFFER_ROT_NUM = 4; // 均一化分数（128手を何巡で均一化させるか）
+	private PuyoDropInfo[] dropPuyoArr = new PuyoDropInfo[BUFFER_NUM];
     private int bufferIndex = 0;
     private PuyoController CurrentDropPuyo = null;
 
@@ -128,6 +130,11 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        UpdateInput();
+        if (CurrentDropPuyo != null)
+        {
+            CurrentDropPuyo.UpdateManual();
+        }
         updateStateEvents[(int)updateState].Invoke();
     }
 
@@ -145,12 +152,54 @@ public class GameManager : MonoBehaviour
         startStateEvents[(int)nextState].Invoke(prevState);
     }
 
-    #region UpdateState
-    #region End
     /// <summary>
-    /// 停止中
+    /// 入力受付(PC用)
     /// </summary>
-    private void StartStopState(eUpdateState prevState)
+    private void UpdateInput()
+    {
+		// 上（クイックドロップ）
+        if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            OnClickQuickDrop();
+        }
+		// 下
+        else
+        if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
+		{
+			OnClickMoveDown();
+		}
+		// 右
+		else
+		if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+		{
+            OnClickMoveRight();
+		}
+		// 左
+		else
+		if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
+		{
+            OnClickMoveLeft();
+		}
+		// 右回転
+		else
+		if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.X))
+		{
+            OnClickRotateRight();
+		}
+		// 左回転
+		else
+		if (Input.GetKeyDown(KeyCode.Q) || Input.GetKeyDown(KeyCode.Z))
+		{
+            OnClickRotateLeft();
+		}
+	}
+
+	#region UpdateState
+	#region End
+	/// <summary>
+	/// 停止中
+	/// </summary>
+	private void StartStopState(eUpdateState prevState)
     {
 
     }
@@ -419,29 +468,91 @@ public class GameManager : MonoBehaviour
         uint rand = (uint)diff.TotalSeconds;
         // ABCDの順に入れて並び替える
         List<PuyoController.ePuyoType> puyoList = new List<PuyoController.ePuyoType>();
-        for(int i=0; i<BUFFER_NUM*2; ++i)
-        {
-            puyoList.Add((PuyoController.ePuyoType)((i % 4) + (int)PuyoController.ePuyoType.Red));
-        }
-        dropPuyoArr = new PuyoDropInfo[BUFFER_NUM];
-        for (int i=0; i<BUFFER_NUM; ++i)
-        {
-            rand = GetNextRand(rand);
-            int rand_index = (int)(rand % puyoList.Count);
-            var puyo1 = puyoList[rand_index];
-            puyoList.RemoveAt(rand_index);
 
-            rand = GetNextRand(rand);
-            rand_index = (int)(rand % puyoList.Count);
-            var puyo2 = puyoList[rand_index];
-            puyoList.RemoveAt(rand_index);
+		//*************************************************************************************
+		// ぷよ配列の作り方
+		// 1. 均一化（同じぷよばっかりにならないに一定の配列内でぷよの種類の個数は同じになるようにする）
+		// 2. 最初の2手は、3色以下
+		//*************************************************************************************
 
-            var info = new PuyoDropInfo()
+		// ABCDの順に入れて並び替える
+		for (int i = 0; i < BUFFER_NUM * 2; ++i)
+		{
+			puyoList.Add((PuyoController.ePuyoType)((i % 4) + (int)PuyoController.ePuyoType.Red));
+		}
+
+        // 最初の2手が3色になるまで繰り返す
+        bool isContinue = false;
+        while(true)
+		{
+            isContinue = false;
+			var puyoListDummy = new List<PuyoController.ePuyoType>(puyoList);
+			// 均一化のループ回数
+			for (int i = 0; i < BUFFER_ROT_NUM; ++i)
+			{
+				for (int j = 0; j < BUFFER_NUM / BUFFER_ROT_NUM; ++j)
+				{
+					int index = j + i * (BUFFER_NUM / BUFFER_ROT_NUM);
+
+                    // 2つのツモができたらチェック
+                    if (index == 2)
+                    {
+                        if (_CheckTumo() == false)
+                        {
+                            isContinue = true;
+                            break;
+                        }
+                    }
+
+
+					rand = GetNextRand(rand);
+					int rand_index = (int)(rand % puyoList.Count);
+					var puyo1 = puyoList[rand_index];
+					puyoList.RemoveAt(rand_index);
+
+					rand = GetNextRand(rand);
+					rand_index = (int)(rand % puyoList.Count);
+					var puyo2 = puyoList[rand_index];
+					puyoList.RemoveAt(rand_index);
+
+					var info = new PuyoDropInfo()
+					{
+						puyoType1 = puyo1,
+						puyoType2 = puyo2,
+					};
+
+					dropPuyoArr[index] = info;
+				}
+
+                // 最初の2手のツモが不正なのでもう一度作り直す
+				if (isContinue)
+				{
+					break;
+				}
+			}
+
+            // この時点でコンティニューフラグが立ってないときは完了
+            if (isContinue == false)
             {
-                puyoType1 = puyo1,
-                puyoType2 = puyo2,
-            };
-            dropPuyoArr[i] = info;
+                break;
+            }
+		}
+
+        bool _CheckTumo()
+        {
+            List<PuyoController.ePuyoType> _containtsPuyo = new List<PuyoController.ePuyoType>();
+            for (int _i = 0; _i < 2; ++_i)
+            {
+                if (_containtsPuyo.Contains(dropPuyoArr[_i].puyoType1) == false)
+                {
+                    _containtsPuyo.Add(dropPuyoArr[_i].puyoType1);
+				}
+				if (_containtsPuyo.Contains(dropPuyoArr[_i].puyoType2) == false)
+				{
+					_containtsPuyo.Add(dropPuyoArr[_i].puyoType2);
+				}
+			}
+            return _containtsPuyo.Count < 4;
         }
     }
 
@@ -822,19 +933,42 @@ public class GameManager : MonoBehaviour
             tokopuyoPallete.SetActive(true);
         }
         isAutoFall = false;
-    }
+	}
 
-    /// <summary>
-    /// ぷよを右に移動
-    /// </summary>
-    public void OnClickMoveRight()
+	/// <summary>
+	/// ぷよを下に移動
+	/// </summary>
+	public void OnClickMoveDown()
+	{
+		if (puyoMode == ePuyoMode.TokoPuyo)
+		{
+			if (CurrentDropPuyo != null && CurrentDropPuyo.IsPuted() == false)
+			{
+				var move = new Vector2Int(0, -1);
+				if (CurrentDropPuyo.IsMove(move, true))
+				{
+					CurrentDropPuyo.Move(move);
+				}
+                // 
+                else
+                {
+                    CurrentDropPuyo.QuickDrop();
+                }
+			}
+		}
+	}
+
+	/// <summary>
+	/// ぷよを右に移動
+	/// </summary>
+	public void OnClickMoveRight()
     {
         if (puyoMode == ePuyoMode.TokoPuyo)
         {
-            if (CurrentDropPuyo != null)
+            if (CurrentDropPuyo != null && CurrentDropPuyo.IsPuted() == false)
             {
                 var move = new Vector2Int(1, 0);
-                if (CurrentDropPuyo.IsMove(move))
+                if (CurrentDropPuyo.IsMove(move, true))
                 {
                     CurrentDropPuyo.Move(move);
                 }
@@ -849,10 +983,10 @@ public class GameManager : MonoBehaviour
     {
         if (puyoMode == ePuyoMode.TokoPuyo)
         {
-            if (CurrentDropPuyo != null)
+            if (CurrentDropPuyo != null && CurrentDropPuyo.IsPuted() == false)
             {
                 var move = new Vector2Int(-1, 0);
-                if (CurrentDropPuyo.IsMove(move))
+                if (CurrentDropPuyo.IsMove(move, true))
                 {
                     CurrentDropPuyo.Move(move);
                 }
@@ -867,9 +1001,9 @@ public class GameManager : MonoBehaviour
     {
         if (puyoMode == ePuyoMode.TokoPuyo)
         {
-            if (CurrentDropPuyo != null)
+            if (CurrentDropPuyo != null && CurrentDropPuyo.IsPuted() == false)
             {
-                CurrentDropPuyo.quickDrop();
+                CurrentDropPuyo.QuickDrop();
             }
         }
     }
@@ -881,7 +1015,7 @@ public class GameManager : MonoBehaviour
     {
         if (puyoMode == ePuyoMode.TokoPuyo)
         {
-            if (CurrentDropPuyo != null)
+            if (CurrentDropPuyo != null && CurrentDropPuyo.IsPuted() == false)
             {
                 CurrentDropPuyo.rotateRight();
             }
@@ -895,7 +1029,7 @@ public class GameManager : MonoBehaviour
     {
         if (puyoMode == ePuyoMode.TokoPuyo)
         {
-            if (CurrentDropPuyo != null)
+            if (CurrentDropPuyo != null && CurrentDropPuyo.IsPuted() == false)
             {
                 CurrentDropPuyo.rotateLeft();
             }
