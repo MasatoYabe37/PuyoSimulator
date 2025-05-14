@@ -53,8 +53,10 @@ public class GameManager : MonoBehaviour
     public PuyoDispController nextNextPuyoDispController = null;
     public GameObject puyozuPallete = null;
     public GameObject tokopuyoPallete = null;
+    public GameObject inputType1 = null;
+    public GameObject inputType2 = null;
 
-    private bool isExistVanishingPuyo = false;
+	private bool isExistVanishingPuyo = false;
     private float waitTimer = 0.0f;
     private int rensaNum = 0;
 
@@ -116,12 +118,14 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        rensaText.SetText($"<b>{0}</b>");
+        rensaText.SetText($"<b>{0}</b>連鎖");
         // プヨ配列を生成
         SetupDropPuyo();
         // とりあえずぷよずモードにしておく
         OnChangePuyoZu();
-    }
+        // ボタンタイプを切り替える
+        OnClickChangeButtonType();
+	}
 
     private void FixedUpdate()
     {
@@ -352,7 +356,7 @@ public class GameManager : MonoBehaviour
     {
         waitTimer = 0.0f;
         rensaNum++;
-        rensaText.SetText($"<b>{rensaNum}</b>");
+        rensaText.SetText($"<b>{rensaNum}</b>連鎖");
 
         // 消えるフラグがついてるやつは消す
         for(int i=0; i<puyoList.Count; ++i)
@@ -897,7 +901,7 @@ public class GameManager : MonoBehaviour
     {
         if (modeChangeText != null)
         {
-            modeChangeText.SetText("PUYO-ZU");
+            modeChangeText.SetText("ぷよ図");
         }
         if (CurrentDropPuyo != null)
         {
@@ -922,7 +926,7 @@ public class GameManager : MonoBehaviour
     {
         if (modeChangeText != null)
         {
-            modeChangeText.SetText("TOKO-PUYO");
+            modeChangeText.SetText("とこぷよ");
         }
         if (puyozuPallete != null)
         {
@@ -1139,9 +1143,30 @@ public class GameManager : MonoBehaviour
             isAutoFall = !isAutoFall;
             if (autoFallButtonText != null)
             {
-                autoFallButtonText.SetText($"AutoFall:{(isAutoFall?"ON":"OFF")}");
+                autoFallButtonText.SetText($"自動落下:{(isAutoFall? "<color=red>オン</color>" : "<color=blue>オフ</color>")}");
             }
         }
+    }
+
+    /// <summary>
+    /// ボタンタイプ切り替え
+    /// </summary>
+    public void OnClickChangeButtonType()
+    {
+        if (inputType1 == null || inputType2 == null)
+        {
+            return;
+        }
+        if (inputType1.activeSelf)
+        {
+            inputType1.SetActive(false);
+            inputType2.SetActive(true);
+		}
+        else
+		{
+			inputType1.SetActive(true);
+			inputType2.SetActive(false);
+		}
     }
 }
 
