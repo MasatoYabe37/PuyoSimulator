@@ -33,6 +33,15 @@ public class GameManager : MonoBehaviour
         Num,
     }
 
+    public enum eInputType
+    {
+        Nomal,
+        BothHand,
+        Movie,
+
+        Max,
+    }
+
     public static int COLUMN_NUM = 6;
     public static int ROW_NUM = 13;
     public static float TILE_SIZE = 75f;
@@ -55,6 +64,7 @@ public class GameManager : MonoBehaviour
     public GameObject tokopuyoPallete = null;
     public GameObject inputType1 = null;
     public GameObject inputType2 = null;
+    public GameObject inputType3 = null;
 
 	private bool isExistVanishingPuyo = false;
     private float waitTimer = 0.0f;
@@ -74,6 +84,8 @@ public class GameManager : MonoBehaviour
 
     private float playTimer = 0.0f;
     public TextController playTimerText = null;
+
+    private eInputType currentInputType = eInputType.Nomal;
 
     public bool isAutoFall { private set; get; } = false;
 
@@ -123,8 +135,9 @@ public class GameManager : MonoBehaviour
         SetupDropPuyo();
         // とりあえずぷよずモードにしておく
         OnChangePuyoZu();
-        // ボタンタイプを切り替える
-        OnClickChangeButtonType();
+        // ボタンタイプをノーマルに切り替える
+        currentInputType = eInputType.Max - 1;// 一回ボタン押したことになるのでデフォとは違うのにしておく
+		OnClickChangeButtonType();
 	}
 
     private void FixedUpdate()
@@ -1157,16 +1170,26 @@ public class GameManager : MonoBehaviour
         {
             return;
         }
-        if (inputType1.activeSelf)
+        currentInputType = (eInputType)(((int)currentInputType + 1) % (int)eInputType.Max);
+
+        switch (currentInputType)
         {
-            inputType1.SetActive(false);
-            inputType2.SetActive(true);
-		}
-        else
-		{
-			inputType1.SetActive(true);
-			inputType2.SetActive(false);
-		}
+            case eInputType.Nomal:
+				inputType1.SetActive(true);
+				inputType2.SetActive(false);
+				inputType3.SetActive(false);
+				break;
+            case eInputType.BothHand:
+				inputType1.SetActive(false);
+				inputType2.SetActive(true);
+				inputType3.SetActive(false);
+				break;
+            case eInputType.Movie:
+				inputType1.SetActive(false);
+				inputType2.SetActive(false);
+				inputType3.SetActive(true);
+				break;
+        }
     }
 }
 
