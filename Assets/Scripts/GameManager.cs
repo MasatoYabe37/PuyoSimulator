@@ -77,7 +77,7 @@ public class GameManager : MonoBehaviour
     private bool isSavePuyo = false;
 
     private const int BUFFER_NUM = 128;
-    private const int BUFFER_ROT_NUM = 4; // 均一化分数（128手を何巡で均一化させるか）
+    private const int BUFFER_ROT_NUM = 8; // 均一化分数（128手を何巡で均一化させるか）
 	private PuyoDropInfo[] dropPuyoArr = new PuyoDropInfo[BUFFER_NUM];
     private int bufferIndex = 0;
     private PuyoController CurrentDropPuyo = null;
@@ -493,7 +493,7 @@ public class GameManager : MonoBehaviour
 		//*************************************************************************************
 
 		// ABCDの順に入れて並び替える
-		for (int i = 0; i < BUFFER_NUM * 2; ++i)
+		for (int i = 0; i < (BUFFER_NUM / BUFFER_ROT_NUM) * 2; ++i)
 		{
 			puyoList.Add((PuyoController.ePuyoType)((i % 4) + (int)PuyoController.ePuyoType.Red));
 		}
@@ -503,10 +503,10 @@ public class GameManager : MonoBehaviour
         while(true)
 		{
             isContinue = false;
-			var puyoListDummy = new List<PuyoController.ePuyoType>(puyoList);
 			// 均一化のループ回数
 			for (int i = 0; i < BUFFER_ROT_NUM; ++i)
 			{
+				var puyoListDummy = new List<PuyoController.ePuyoType>(puyoList);
 				for (int j = 0; j < BUFFER_NUM / BUFFER_ROT_NUM; ++j)
 				{
 					int index = j + i * (BUFFER_NUM / BUFFER_ROT_NUM);
@@ -523,14 +523,14 @@ public class GameManager : MonoBehaviour
 
 
 					rand = GetNextRand(rand);
-					int rand_index = (int)(rand % puyoList.Count);
-					var puyo1 = puyoList[rand_index];
-					puyoList.RemoveAt(rand_index);
+					int rand_index = (int)(rand % puyoListDummy.Count);
+					var puyo1 = puyoListDummy[rand_index];
+					puyoListDummy.RemoveAt(rand_index);
 
 					rand = GetNextRand(rand);
-					rand_index = (int)(rand % puyoList.Count);
-					var puyo2 = puyoList[rand_index];
-					puyoList.RemoveAt(rand_index);
+					rand_index = (int)(rand % puyoListDummy.Count);
+					var puyo2 = puyoListDummy[rand_index];
+					puyoListDummy.RemoveAt(rand_index);
 
 					var info = new PuyoDropInfo()
 					{
@@ -1081,7 +1081,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void OnClickReset()
     {
-        if (puyoMode == ePuyoMode.PuyoZu && updateState == eUpdateState.Stop)
+        if (updateState == eUpdateState.Stop)
         {
             ResetPuyoList();
         }
