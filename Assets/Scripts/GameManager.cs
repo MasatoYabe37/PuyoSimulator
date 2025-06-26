@@ -1081,10 +1081,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void OnClickReset()
     {
-        if (updateState == eUpdateState.Stop)
-        {
-            ResetPuyoList();
-        }
+        ResetPuyoList();
     }
 
     /// <summary>
@@ -1123,7 +1120,7 @@ public class GameManager : MonoBehaviour
         int milliSeconds = 0;
         if (puyoMode == ePuyoMode.TokoPuyo)
         {
-            playTimer += Time.fixedUnscaledDeltaTime;
+            playTimer += Time.unscaledDeltaTime;
             minutes = (int)(playTimer / 60f);
             seconds = (int)((int)playTimer % 60);
             milliSeconds = (int)((int)(playTimer * 100f) % 100);

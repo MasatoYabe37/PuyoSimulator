@@ -88,6 +88,8 @@ public class PuyoController : MonoBehaviour
     private float putTimer = 0.0f;
     private const float PUT_TIME = 1.0f;
 
+    private const float FALL_SPEED = 2.0f;
+
     private bool isPuted = false;
 
     /// <summary> 位置（インデックス） </summary>
@@ -172,7 +174,7 @@ public class PuyoController : MonoBehaviour
 
     private void Fall()
     {
-        float fall_speed = 1.0f * Application.targetFrameRate;
+        float fall_speed = FALL_SPEED * Application.targetFrameRate;
         float move_y = fall_speed * Time.deltaTime;
         if (isFallable(true, new Vector2(0.0f, move_y), true))
 		{
