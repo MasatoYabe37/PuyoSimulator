@@ -419,7 +419,7 @@ public class GameManager : MonoBehaviour
         // 下にあるやつから一番下まで下ろす
         for(int i=0; i<puyoList.Count; ++i)
         {
-            while(puyoList[i].isFallable())
+            while(puyoList[i].isFallable(false, Vector2.zero, false))
             {
                 var pos = puyoList[i].position;
                 pos.y -= 1;

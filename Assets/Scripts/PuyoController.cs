@@ -86,7 +86,7 @@ public class PuyoController : MonoBehaviour
     private ePuyoRotate puyoRotate = ePuyoRotate.Up;
 
     private float putTimer = 0.0f;
-    private const float PUT_TIME = 0.5f;
+    private const float PUT_TIME = 1.0f;
 
     private bool isPuted = false;
 
@@ -97,7 +97,9 @@ public class PuyoController : MonoBehaviour
         {
             float x = positionRaw.x / GameManager.TILE_SIZE;
             float y = positionRaw.y / GameManager.TILE_SIZE;
-            return new Vector2Int((int)x, (int)y);
+            int int_x = Mathf.FloorToInt(x);
+            int int_y = Mathf.FloorToInt(y);
+            return new Vector2Int(int_x, int_y);
         }
         set
         {
@@ -149,15 +151,17 @@ public class PuyoController : MonoBehaviour
 				}
 			}
 		}
-		positionRaw = rectTransform.anchoredPosition;
+
+        // 子ぷよは親に合わせて回転の位置を調整する
+        if (parentPuyo != null)
+        {
+            UpdateRotate();
+        }
+
+        positionRaw = rectTransform.anchoredPosition;
 		positionOffset.x = positionRaw.x % GameManager.TILE_SIZE;
 		positionOffset.y = positionRaw.y % GameManager.TILE_SIZE;
 
-		// 子ぷよは親に合わせて回転の位置を調整する
-		if (parentPuyo != null)
-		{
-			UpdateRotate();
-		}
 
         // 子ぷよを更新する
         if (childPuyo != null)
@@ -167,14 +171,22 @@ public class PuyoController : MonoBehaviour
 	}
 
     private void Fall()
-	{
-		if (isFallable())
+    {
+        float fall_speed = 1.0f * Application.targetFrameRate;
+        float move_y = fall_speed * Time.deltaTime;
+        if (isFallable(true, new Vector2(0.0f, move_y), true))
 		{
-			float fall_speed = 1.0f * Application.targetFrameRate;
-			float move_y = fall_speed * Time.deltaTime;
 			Vector2 move = new Vector2(0.0f, -move_y);
 			rectTransform.anchoredPosition += move;
 		}
+        else
+        {
+            putTimer += Time.deltaTime;
+            if (putTimer > PUT_TIME)
+            {
+                SetPut();
+            }
+        }
 	}
 
     /// <summary>
@@ -198,6 +210,7 @@ public class PuyoController : MonoBehaviour
         puyoSelectButton.enabled = isPalletePuyo;
         puyoSelectButton.interactable = isPalletePuyo;
         puyoSelectImage.SetActive(false);
+        putTimer = 0.0f;
     }
 
     /// <summary>
@@ -239,7 +252,7 @@ public class PuyoController : MonoBehaviour
     /// 落下可能か？（下に何もないか？）
     /// </summary>
     /// <returns></returns>
-    public bool isFallable(bool isCheckChild = false)
+    public bool isFallable(bool isCheckOffset, Vector2 move, bool isCheckChild = false)
     {
         // 重なっている
         if (isOvered())
@@ -247,31 +260,53 @@ public class PuyoController : MonoBehaviour
             return false;
         }
 
+        bool result = true;
+
         // 下は地面
         if (position.y <= 0)
         {
-            return false;
+            result = false;
         }
 
-        // ほかのぷよがある
+        // 下にほかのぷよがある
         Vector2Int under_position = position;
         under_position.y -= 1;
         if (GameManager.Instance.GetPuyo(under_position) != null)
         {
-            return false;
+            result = false;
         }
 
-        bool result = true;
-
-        if (isCheckChild)
+        if (isCheckOffset)
         {
-            if (childPuyo != null)
+            // 動かせない場合は同じ位置インデックス内で動けるかをチェックする
+            if (result == false)
             {
-                result = childPuyo.isFallable(isCheckChild);
+                result = checkOffset(move.y);
             }
-		}
+        }
+
+        if (result)
+        {
+            if (isCheckChild)
+            {
+                if (childPuyo != null)
+                {
+                    result = childPuyo.isFallable(isCheckOffset, move, isCheckChild);
+                }
+            }
+        }
 
         return result;
+
+        bool checkOffset(float move_y)
+        {
+            // yを引いた位置が0より下に行くかどうか
+            if (positionOffset.y > move_y)
+            {
+                return true;
+            }
+            return false;
+        }
     }
 
     /// <summary>
@@ -282,11 +317,11 @@ public class PuyoController : MonoBehaviour
         // 下まで移動させる
         while(true)
         {
-            if (isFallable() == false)
+            if (isFallable(false, Vector2.zero, false) == false)
             {
                 break;
             }
-            if (childPuyo != null && childPuyo.isFallable() == false)
+            if (childPuyo != null && childPuyo.isFallable(false, Vector2.zero, false) == false)
             {
                 break;
             }
@@ -319,6 +354,15 @@ public class PuyoController : MonoBehaviour
     public void SetPosition()
     {
         rectTransform.anchoredPosition = positionRaw;
+    }
+
+    /// <summary>
+    /// ぷよのポジションを更新
+    /// </summary>
+    public void UpdatePosition()
+    {
+        var pos = position;
+        position = pos;
     }
 
     /// <summary>
@@ -483,6 +527,11 @@ public class PuyoController : MonoBehaviour
             var move = ValidatePosition();
             if (move.magnitude > 0)
             {
+                // 補正する際はオフセットはクリアする
+                positionOffset = Vector2.zero;
+                parentPuyo.positionOffset = Vector2.zero;
+
+                // ポジションを補正
                 position = pos + move;
                 parentPuyo.position += move;
             }
@@ -632,6 +681,7 @@ public class PuyoController : MonoBehaviour
             child.SetPut();
         }
         positionOffset = Vector2.zero;
+        UpdatePosition();
     }
 
     public bool IsPuted()
